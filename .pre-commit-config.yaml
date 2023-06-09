@@ -13,5 +13,5 @@ repos:
     rev: 5.12.0
     hooks:
     -   id: isort
-        files: "\\.(py)$"
+        files: "src/\\.(py)$"
         args: [--settings-path=.isort.cfg]
