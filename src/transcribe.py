@@ -11,12 +11,7 @@ from word import Word
 from utils import get_repo_path
 
 
-def main() -> int:
-    repo_path = get_repo_path()
-    model_path = repo_path + "models/vosk-model-small-pl-0.22"
-    audio_filename = repo_path + "audio/audio_mono.wav"  # _no_silence
-    model = Model(model_path)
-
+def get_list_of_words(audio_filename, model):
     with wave.open(audio_filename, "rb") as wf:
         rec = KaldiRecognizer(model, wf.getframerate())
         rec.SetWords(True)
@@ -45,6 +40,16 @@ def main() -> int:
             for obj in sentence["result"]:
                 w = Word(obj)  # create custom Word object
                 list_of_words.append(w)  # and add it to list
+    return list_of_words
+
+
+def main() -> int:
+    repo_path = get_repo_path()
+    audio_file = repo_path.joinpath("audio/audio_mono.wav")
+    model_path = repo_path.joinpath("models/vosk-model-small-pl-0.22")
+    model = Model(str(model_path))
+
+    list_of_words = get_list_of_words(str(audio_file), model)
 
     with open("audio/trascript.txt", "w") as f:
         for word in list_of_words:

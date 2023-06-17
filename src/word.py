@@ -27,6 +27,6 @@ class Word:
         return {
             "word": self.word,
             "start_time": self.start,
-            "stop_time": self.end,
+            "end_time": self.end,
             "confidence": self.conf * 100,
         }
