@@ -1,4 +1,4 @@
-"""This script is used in the notebooks to set the pathas if the files were in the /src
+"""This script is used in the notebooks to set the path as if the files were in the /src
 """
 
 # Standard Library Imports

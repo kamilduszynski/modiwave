@@ -163,3 +163,4 @@ models/
 audio/
 *.wav
 *.mp4
+.vscode/
