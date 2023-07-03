@@ -90,6 +90,7 @@ def main() -> int:
     original_audio_duration = math.modf(np.round(sample_points / sampling_freq / 60, 2))
     og_audio_min = int(original_audio_duration[1])
     og_audio_sec = int(60 * original_audio_duration[0])
+
     silence_audio_duration = math.modf(
         np.round(silence_samples_count / sampling_freq / 60, 2)
     )
@@ -100,6 +101,7 @@ def main() -> int:
     )
     noise_audio_min = int(noise_audio_duration[1])
     noise_audio_sec = int(60 * noise_audio_duration[0])
+
     time_arrays = [time_array, silence_time_array, noise_time_array]
     audio_arrays = [audio, audio[silence_parts, :], audio[noise_parts, :]]
 
