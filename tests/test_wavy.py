@@ -25,14 +25,14 @@ class TestWavy(unittest.TestCase):
 
     def test_str(self):
         wavy_informal_string = str(
-            "################ AUDIO ######################\n"
+            "######################## AUDIO ########################\n"
             f"|Audio file:         {str(self.audio_filename)}\n"
             f"|Data type:          int16\n"
             f"|Shape:              (27361, 2)\n"
             f"|Sampling frequency: 48000\n"
             f"|Min amplitude:      0\n"
             f"|Max amplitude:      1844\n"
-            "#############################################"
+            "#######################################################"
         )
         self.assertEqual(wavy_informal_string, str(self.wavy))
 
