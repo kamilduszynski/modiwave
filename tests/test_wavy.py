@@ -1,4 +1,5 @@
 # Standard Library Imports
+import re
 import unittest
 
 # Local Imports
@@ -28,13 +29,21 @@ class TestWavy(unittest.TestCase):
             "######################## AUDIO ########################\n"
             f"|Audio file:         {str(self.audio_filename)}\n"
             f"|Data type:          int16\n"
-            f"|Shape:              (27361, 2)\n"
-            f"|Sampling frequency: 48000\n"
+            f"|Shape:              (57600, 2)\n"
+            f"|Sampling rate:      48000\n"
+            f"|Duration:           1.2s\n"
             f"|Min amplitude:      0\n"
-            f"|Max amplitude:      1844\n"
+            f"|Max amplitude:      2191\n"
             "#######################################################"
         )
         self.assertEqual(wavy_informal_string, str(self.wavy))
+
+    def test_remove_silence(self):
+        threshold = 5
+        self.wavy.remove_silence(threshold)
+        regx = re.compile(".wav\\b")
+        wavy_no_silence = Wavy(regx.sub("_no_silence.wav", str(self.audio_filename)))
+        self.assertLessEqual(threshold, wavy_no_silence.min_amplitude)
 
 
 if __name__ == "__main__":
