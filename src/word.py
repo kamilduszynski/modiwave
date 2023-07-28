@@ -10,11 +10,10 @@ class Word:
             start (float): start time of the pronouncing the word, in seconds
             word (str): recognized word
         """
-
-        self.conf = dict["conf"]
-        self.end = dict["end"]
-        self.start = dict["start"]
         self.word = dict["word"]
+        self.start = dict["start"]
+        self.end = dict["end"]
+        self.conf = dict["conf"]
 
     def to_string(self) -> str:
         """Returns a string describing this instance"""
@@ -30,3 +29,12 @@ class Word:
             "end_time": self.end,
             "confidence": self.conf * 100,
         }
+
+    def to_tuple(self) -> tuple:
+        """Returns a dict describing this instance"""
+        return (
+            self.word,
+            self.start,
+            self.end,
+            self.conf * 100,
+        )

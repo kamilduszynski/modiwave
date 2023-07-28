@@ -10,9 +10,9 @@ def get_repo_path() -> PosixPath:
     return this_file_path.parent.parent
 
 
-def get_sample_index_by_time(start_time, end_time, sampling_freq):
-    start_sample = int(start_time * sampling_freq)
-    end_sample = int(end_time * sampling_freq)
+def get_sample_index_by_time(start_time, end_time, sampling_rate):
+    start_sample = int(start_time * sampling_rate)
+    end_sample = int(end_time * sampling_rate)
     return start_sample, end_sample
 
 
