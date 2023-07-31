@@ -4,7 +4,7 @@ import unittest
 
 # Local Imports
 from src.wavy import Wavy
-from src.utils import get_repo_path
+from src.tools.utils import get_repo_path
 
 
 class TestWavy(unittest.TestCase):
@@ -21,13 +21,13 @@ class TestWavy(unittest.TestCase):
             Wavy("incorrect_file_path")
 
     def test_repr(self):
-        wavy_formal_string = f"<Wavy class of audio file: {self.audio_filename}>"
+        wavy_formal_string = f"<class '{self.wavy.__class__.__name__}' from audio file: {self.wavy.audio_path}>"
         self.assertEqual(wavy_formal_string, repr(self.wavy))
 
     def test_str(self):
         wavy_informal_string = str(
             "######################## AUDIO ########################\n"
-            f"|Audio file:         {str(self.audio_filename)}\n"
+            f"|Audio file:         {str(self.wavy.audio_path)}\n"
             f"|Data type:          int16\n"
             f"|Shape:              (57600, 2)\n"
             f"|Sampling rate:      48000\n"

@@ -13,53 +13,46 @@
 #     name: python3
 # ---
 
-# %%
-# %load_ext autoreload
-# %autoreload 2
-
-# %%
-import path  # nopycln: import
-
 # Standard Library Imports
 from collections import Counter
 
 # Third-party Imports
+# %%
+# %load_ext autoreload
+# %autoreload 2
+# %%
+import path  # nopycln: import
 import pandas as pd
-from scipy.io import wavfile
-from vosk import Model
 
 # Local Imports
-from transcribe import get_list_of_words
-from utils import get_repo_path, get_sample_index_by_time
+from wavy import Wavy
+from tools.utils import get_sample_index_by_time
 
 # %%
-repo_path = get_repo_path()
-model_path = repo_path.joinpath("models/vosk-model-small-pl-0.22")
-audio_filename = repo_path.joinpath("audio/audio_mono.wav")
-model = Model(str(model_path))
+wavy = Wavy("original_audio.wav")
+list_of_words = wavy.transcribe()
 
 # %%
-sampling_freq, audio = wavfile.read(str(audio_filename))
-list_of_words = get_list_of_words(audio_filename, model)
-
-# %%
-results = Counter()
-df_words = pd.DataFrame([word.to_dict() for word in list_of_words])
-df_words["word"].apply(lambda x: results.update(x.split()))
-
-results = [{"word": word, "count": count} for word, count in results.items()]
-df_words_count = pd.DataFrame(results)
-# %%
-df_words_count.sort_values(by="count", ascending=True).head(50)
-# %%
-df_words_count
+df_words = pd.read_csv(wavy.transcript_file_path)
 
 # %%
 df_words
 
 # %%
+results = Counter()
+df_words["word"].apply(lambda x: results.update(x.split()))
+results = [{"word": word, "count": count} for word, count in results.items()]
+df_words_count = pd.DataFrame(results)
+# %%
+df_words_count.sort_values(by="count", ascending=False).head(50)
+# %%
+df_words_count
+
+# %%
 df_words["start_sample"], df_words["end_sample"] = df_words.apply(
-    lambda x: get_sample_index_by_time(x["start_time"], x["end_time"], sampling_freq),
+    lambda x: get_sample_index_by_time(
+        x["start_time"], x["end_time"], wavy.sampling_rate
+    ),
     axis=1,
 )
 
