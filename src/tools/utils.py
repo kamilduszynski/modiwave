@@ -31,14 +31,6 @@ def calculate_time_array(samples_count: int, sampling_rate: int) -> np.ndarray:
     return np.linspace(0, samples_count / sampling_rate, num=samples_count)
 
 
-def convert_to_decibel(sample: float) -> float:
-    ref = 1
-    if sample != 0:
-        return 20 * np.log10(abs(sample) / ref)
-    else:
-        return -60
-
-
 def rolling_window(a, window):
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
