@@ -28,8 +28,7 @@ def cut_audio_segment(
 
 
 def calculate_time_array(samples_count: int, sampling_rate: int) -> np.ndarray:
-    time_array = np.linspace(0, samples_count / sampling_rate, num=samples_count)
-    return time_array
+    return np.linspace(0, samples_count / sampling_rate, num=samples_count)
 
 
 def convert_to_decibel(sample: float) -> float:
@@ -38,3 +37,15 @@ def convert_to_decibel(sample: float) -> float:
         return 20 * np.log10(abs(sample) / ref)
     else:
         return -60
+
+
+def rolling_window(a, window):
+    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
+    strides = a.strides + (a.strides[-1],)
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+
+
+def find_subarrays(a, b):
+    temp = rolling_window(a, len(b))
+    result = np.where(np.all(temp == b, axis=1))
+    return result[0] if result else None

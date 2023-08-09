@@ -9,26 +9,29 @@ import wave
 
 # Third-party Imports
 import numpy as np
+import librosa
 import matplotlib.pyplot as plt
 from vosk import Model, KaldiRecognizer
 from scipy.io import wavfile
 
 # Local Imports
-import tools.utils
-from tools.word import Word
+import src.tools.utils as ut
+from src.tools.word import Word
 
 
 class Wavy:
     def __init__(self, audio_file: str) -> None:
         self.audio_file = audio_file
         self.regx = re.compile(".wav\\b")
-        self.repo_path = tools.utils.get_repo_path()
+        self.repo_path = ut.get_repo_path()
         self.audio_dir = self.repo_path.joinpath("audio")
         if not self.audio_dir.exists():
             os.mkdir(self.audio_dir)
         self.transcripts_dir = self.repo_path.joinpath("transcripts")
         if not self.transcripts_dir.exists():
             os.mkdir(self.transcripts_dir)
+        transcript_file = self.regx.sub("_transcript.csv", self.audio_file)
+        self.transcript_file_path = self.transcripts_dir.joinpath(transcript_file)
         self.audio_path = self.audio_dir.joinpath(audio_file)
 
         if self.audio_path.exists():
@@ -38,9 +41,12 @@ class Wavy:
             self.audio_samples = self.audio.shape[0]
             self.audio_duration = self.audio_samples / self.sampling_rate
             # audio_normalized = self.audio / (2.0**15)
-            db_audio = np.vectorize(tools.utils.convert_to_decibel)(
-                self.audio / (2.0**15)
-            )
+
+            # db_audio = np.vectorize(ut.convert_to_decibel)(
+            # self.audio / (2.0**15)
+            # )
+            db_audio = librosa.amplitude_to_db(self.audio / (2.0**15))
+
             if len(self.audio_shape) == 2:
                 self.l_channel = self.audio[:, 0]
                 self.r_channel = self.audio[:, 1]
@@ -85,12 +91,24 @@ class Wavy:
             self.l_channel.astype(self.audio_data_type),
         )
 
-    def _remove_silence_plot(self, time_arrays: tuple, audio_arrays: tuple) -> None:
+    def _remove_silence_plot(
+        self,
+        time_arrays: tuple,
+        audio_arrays: tuple,
+        silence_samples_indexes: np.ndarray,
+    ) -> None:
         fig, axs = plt.subplots(3, 1)
         fig.suptitle("Audio amplitude", fontsize=16)
         fig.set_figheight(10)
         fig.set_figwidth(16)
-        axs[0].plot(time_arrays[0], audio_arrays[0], color="r")
+        axs[0].plot(time_arrays[0], audio_arrays[0], color="r", label="original audio")
+        axs[0].plot(
+            time_arrays[0][silence_samples_indexes],
+            audio_arrays[2],
+            color="c",
+            label="silence",
+        )
+        axs[0].legend()
         axs[0].set_title("Original audio")
         axs[0].set_ylabel("Amplitude")
         axs[1].plot(time_arrays[1], audio_arrays[1], color="g")
@@ -140,13 +158,11 @@ class Wavy:
         )
 
         if plot:
-            time_array = tools.utils.calculate_time_array(
-                self.audio_samples, self.sampling_rate
-            )
-            silence_time_array = tools.utils.calculate_time_array(
+            time_array = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            silence_time_array = ut.calculate_time_array(
                 silence_samples_count, self.sampling_rate
             )
-            no_silence_time_array = tools.utils.calculate_time_array(
+            no_silence_time_array = ut.calculate_time_array(
                 no_silence_samples_count, self.sampling_rate
             )
             time_arrays = (time_array, no_silence_time_array, silence_time_array)
@@ -155,43 +171,27 @@ class Wavy:
                 self.audio[no_silence_samples_indexes],
                 self.audio[silence_samples_indexes],
             )
-            self._remove_silence_plot(time_arrays, audio_arrays)
+            self._remove_silence_plot(
+                time_arrays, audio_arrays, silence_samples_indexes
+            )
 
     def remove_silence_by_db_threshold(
         self, db_threshold=30, min_duration=0.1, plot=False
     ) -> None:
-        def rolling_window(a, window):
-            shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-            strides = a.strides + (a.strides[-1],)
-            return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
-
-        def find_subarrays(a, b):
-            temp = rolling_window(a, len(b))
-            result = np.where(np.all(temp == b, axis=1))
-            return result[0] if result else None
-
-        # import numba
-        # @numba.jit
-        # def find_subarrays(a, b, min_samples, results):
-        #     for i in range(int(len(a)/min_samples)):
-        #         if i*min_samples+min_samples > len(a):
-        #             continue
-        #         a = a[i*min_samples:i*min_samples+min_samples]
-        #         for j in range(len(a)):
-        #             result = True
-        #             for k in range(len(b)):
-        #                 result = result and (a[j+k] == b[k])
-        #                 if not result:
-        #                     break
-        #             if result:
-        #                 results.append(i*min_samples+j)
-        #     return 0
-
         min_samples = int(min_duration * self.sampling_rate)
+        non_silent_intervals = librosa.effects.split(
+            self.l_channel,
+            top_db=db_threshold,
+            frame_length=min_samples,
+            hop_length=min_samples,
+        )
+        print(non_silent_intervals)
         silence_samples_indexes = np.where(self.db_audio_l < -db_threshold)[0]
 
-        diff = silence_samples_indexes[:-1] - silence_samples_indexes[1:]
-        diff = find_subarrays(diff, np.full(min_samples, -1))
+        diff = np.diff(silence_samples_indexes)  # [:-1] - silence_samples_indexes[1:]
+        diff = np.append(diff, 1)
+        print(diff)
+        diff = ut.find_subarrays(diff, np.full(min_samples, 1))
 
         si = np.array([])
         for i in range(int(len(silence_samples_indexes) / min_samples)):
@@ -220,7 +220,6 @@ class Wavy:
             np.round(no_silence_samples_count / self.sampling_rate / 60, 2)
         )
 
-        # self.audio_no_silence = self.audio[no_silence_samples_indexes]
         audio_no_silence_file = self.regx.sub("_no_silence.wav", self.audio_file)
         audio_no_silence_file_path = self.audio_dir.joinpath(audio_no_silence_file)
 
@@ -244,13 +243,11 @@ class Wavy:
         )
 
         if plot:
-            time_array = tools.utils.calculate_time_array(
-                self.audio_samples, self.sampling_rate
-            )
-            silence_time_array = tools.utils.calculate_time_array(
+            time_array = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            silence_time_array = ut.calculate_time_array(
                 silence_samples_count, self.sampling_rate
             )
-            no_silence_time_array = tools.utils.calculate_time_array(
+            no_silence_time_array = ut.calculate_time_array(
                 no_silence_samples_count, self.sampling_rate
             )
             time_arrays = (time_array, no_silence_time_array, silence_time_array)
@@ -259,7 +256,9 @@ class Wavy:
                 self.db_audio_l[no_silence_samples_indexes],
                 self.db_audio_l[silence_samples_indexes],
             )
-            self._remove_silence_plot(time_arrays, audio_arrays)
+            self._remove_silence_plot(
+                time_arrays, audio_arrays, silence_samples_indexes
+            )
 
     def plot_audio_amplitude(self, db_scale=False) -> None:
         """Plot orginal audio signal amplitude"""
@@ -270,17 +269,13 @@ class Wavy:
             fig.set_figwidth(16)
             if not db_scale:
                 axs[0].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.l_channel,
                     color="r",
                 )
             else:
                 axs[0].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.db_audio_l,
                     color="r",
                 )
@@ -288,17 +283,13 @@ class Wavy:
             axs[0].set_ylabel("Amplitude")
             if not db_scale:
                 axs[1].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.r_channel,
                     color="g",
                 )
             else:
                 axs[1].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.db_audio_r,
                     color="g",
                 )
@@ -306,17 +297,13 @@ class Wavy:
             axs[1].set_ylabel("Amplitude")
             if not db_scale:
                 axs[2].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.r_channel - self.l_channel,
                     color="b",
                 )
             else:
                 axs[2].plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.db_audio_r - self.db_audio_l,
                     color="b",
                 )
@@ -328,17 +315,13 @@ class Wavy:
             plt.title("Audio amplitude", fontsize=16)
             if not db_scale:
                 plt.plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.l_channel,
                     color="r",
                 )
             else:
                 plt.plot(
-                    tools.utils.calculate_time_array(
-                        self.audio_samples, self.sampling_rate
-                    ),
+                    ut.calculate_time_array(self.audio_samples, self.sampling_rate),
                     self.db_audio_l,
                     color="r",
                 )
@@ -393,9 +376,6 @@ class Wavy:
                     w = Word(obj)  # create custom Word object
                     list_of_words.append(w)  # and add it to list
 
-        transcript_file = self.regx.sub("_transcript.csv", self.audio_file)
-        self.transcript_file_path = self.transcripts_dir.joinpath(transcript_file)
-
         with open(self.transcript_file_path, "w") as f:
             writer = csv.writer(f)
             writer.writerow(("word", "start_time", "end_time", "confidence"))
@@ -409,14 +389,14 @@ def main():
     print(repr(test_wavy))
     print(test_wavy)
 
-    test_wavy.plot_audio_amplitude(db_scale=True)
-    # test_wavy.remove_silence_by_signal_aplitude_threshold(threshold=5)
-    # test_wavy.remove_silence_by_db_threshold(db_threshold=30, min_duration=0.1, plot=True)
-    test_wavy.plot_audio_frequency_spectrum()
+    # test_wavy.plot_audio_amplitude(db_scale=False)
+    test_wavy.remove_silence_by_signal_aplitude_threshold(threshold=5)
+    test_wavy.remove_silence_by_db_threshold(db_threshold=30, min_duration=0.1)
+    # test_wavy.plot_audio_frequency_spectrum()
 
-    # list_of_words = test_wavy.transcribe()
-    # for word in list_of_words:
-    #     print(word.to_string() + "\n")
+    list_of_words = test_wavy.transcribe()
+    for word in list_of_words:
+        print(word.to_string() + "\n")
     return 0
 
 

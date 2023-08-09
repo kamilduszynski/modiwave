@@ -31,10 +31,19 @@ class Word:
         }
 
     def to_tuple(self) -> tuple:
-        """Returns a dict describing this instance"""
+        """Returns a tuple describing this instance"""
         return (
             self.word,
             self.start,
             self.end,
             self.conf * 100,
         )
+
+    def to_list(self) -> list:
+        """Returns a list describing this instance"""
+        return [
+            self.word,
+            self.start,
+            self.end,
+            self.conf * 100,
+        ]

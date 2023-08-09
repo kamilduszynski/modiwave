@@ -161,9 +161,11 @@ cython_debug/
 
 .vscode/
 models/
-transcripts/
 *.wav
 *.mp4
 
 audio/*
 !audio/test.wav
+
+transcripts/*
+!transcripts/test_transcript.csv

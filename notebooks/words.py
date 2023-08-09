@@ -13,14 +13,11 @@
 #     name: python3
 # ---
 
+# %%
 # Standard Library Imports
 from collections import Counter
 
 # Third-party Imports
-# %%
-# %load_ext autoreload
-# %autoreload 2
-# %%
 import path  # nopycln: import
 import pandas as pd
 
@@ -29,14 +26,14 @@ from wavy import Wavy
 from tools.utils import get_sample_index_by_time
 
 # %%
-wavy = Wavy("original_audio.wav")
+wavy = Wavy("test.wav")
 list_of_words = wavy.transcribe()
 
 # %%
 df_words = pd.read_csv(wavy.transcript_file_path)
 
 # %%
-df_words
+print(df_words.values.tolist())
 
 # %%
 results = Counter()

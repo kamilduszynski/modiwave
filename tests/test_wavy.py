@@ -2,6 +2,9 @@
 import re
 import unittest
 
+# Third-party Imports
+import pandas as pd
+
 # Local Imports
 from src.wavy import Wavy
 from src.tools.utils import get_repo_path
@@ -38,12 +41,19 @@ class TestWavy(unittest.TestCase):
         )
         self.assertEqual(wavy_informal_string, str(self.wavy))
 
-    def test_remove_silence(self):
+    def test_remove_silence_by_signal_aplitude_threshold(self):
         threshold = 5
-        self.wavy.remove_silence(threshold)
+        self.wavy.remove_silence_by_signal_aplitude_threshold(threshold)
         regx = re.compile(".wav\\b")
         wavy_no_silence = Wavy(regx.sub("_no_silence.wav", str(self.audio_filename)))
         self.assertLessEqual(threshold, wavy_no_silence.min_amplitude)
+
+    def test_transcribe(self):
+        wavy_list_of_words = self.wavy.transcribe()
+        wavy_list_of_words = [w.to_list() for w in wavy_list_of_words]
+        transcript_list_of_words = pd.read_csv(self.wavy.transcript_file_path)
+        transcript_list_of_words = transcript_list_of_words.values.tolist()
+        self.assertEqual(transcript_list_of_words, wavy_list_of_words)
 
 
 if __name__ == "__main__":
