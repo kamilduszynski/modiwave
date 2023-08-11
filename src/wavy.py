@@ -131,11 +131,6 @@ class Wavy:
         plt.show()
 
     def _remove_silence_print(self, audio_no_silence_file_path: str) -> None:
-        """Message about removing silence from audio file
-
-        Args:
-            audio_no_silence_file_path (str): audio without silence filepath
-        """
         og_d = math.modf(np.round(self.audio_samples / self.sampling_rate / 60, 2))
         s_d = math.modf(
             np.round(self.silence_samples_count / self.sampling_rate / 60, 2)
@@ -373,19 +368,20 @@ def main():
     print(repr(wavy))
     print(wavy)
 
-    # wavy.plot_audio_amplitude(db_scale=False)
-    no_silence_file = wavy.remove_silence_by_signal_aplitude_threshold(
-        threshold=5, verbose=True
-    )
-    no_silence_file = wavy.remove_silence_by_db_threshold(
-        db_threshold=30, min_duration=0.1, verbose=True
-    )
-    print(no_silence_file)
-    # wavy.plot_audio_frequency_spectrum()
-
     list_of_words = wavy.transcribe()
     for word in list_of_words:
         print(word.to_string() + "\n")
+
+    wavy.plot_audio_amplitude(db_scale=False)
+    wavy.plot_audio_frequency_spectrum()
+    wavy.remove_silence_by_signal_aplitude_threshold(
+        threshold=5, verbose=True, plot=True
+    )
+    print(
+        wavy.remove_silence_by_db_threshold(
+            db_threshold=30, min_duration=0.1, verbose=True, plot=True
+        )
+    )
     return 0
 
 
