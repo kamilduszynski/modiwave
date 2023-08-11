@@ -131,6 +131,11 @@ class Wavy:
         plt.show()
 
     def _remove_silence_print(self, audio_no_silence_file_path: str) -> None:
+        """Message about removing silence from audio file
+
+        Args:
+            audio_no_silence_file_path (str): audio without silence filepath
+        """
         og_d = math.modf(np.round(self.audio_samples / self.sampling_rate / 60, 2))
         s_d = math.modf(
             np.round(self.silence_samples_count / self.sampling_rate / 60, 2)
@@ -152,8 +157,18 @@ class Wavy:
         print("#######################################################")
 
     def remove_silence_by_signal_aplitude_threshold(
-        self, threshold=4, plot=False, verbose=True
-    ) -> None:
+        self, threshold=4, plot=False, verbose=False
+    ) -> str:
+        """Remove silence with specified audio signal amplitude threshold
+
+        Args:
+            threshold (int, optional): Maximum audio signal amplitude threshold. Defaults to 4.
+            plot (bool, optional): Show plot. Defaults to False.
+            verbose (bool, optional): Show message. Defaults to False.
+
+        Returns:
+            str: Audio without silence filepath
+        """
         self.silence_samples_indexes = np.where(np.abs(self.l_channel) < threshold)[0]
         self.silence_samples_count = self.l_channel[self.silence_samples_indexes].shape[
             0
@@ -179,18 +194,23 @@ class Wavy:
 
         if plot:
             self._remove_silence_plot(db_scale=False)
+        return str(audio_no_silence_file_path)
 
     def remove_silence_by_db_threshold(
-        self, db_threshold=30, min_duration=0.1, plot=False, verbose=True
-    ) -> None:
+        self, db_threshold=30, min_duration=0.1, plot=False, verbose=False
+    ) -> str:
+        """Remove silence with specified minimal duration and threshold in decibels
+
+        Args:
+            db_threshold (int, optional): Maximum silence threshold in decibels. Defaults to 30.
+            min_duration (float, optional): Minimum silence duration in seconds. Defaults to 0.1.
+            plot (bool, optional): Show plot. Defaults to False.
+            verbose (bool, optional): Show message. Defaults to Flase.
+
+        Returns:
+            str: Audio without silence filepath
+        """
         min_samples = int(min_duration * self.sampling_rate)
-        non_silent_intervals = librosa.effects.split(
-            self.l_channel,
-            top_db=db_threshold,
-            frame_length=min_samples,
-            hop_length=min_samples,
-        )
-        print(non_silent_intervals)
         silence_samples_indexes = np.where(self.db_audio_l < -db_threshold)[0]
 
         diff = np.diff(silence_samples_indexes)
@@ -214,6 +234,14 @@ class Wavy:
             0
         ]
 
+        # non_silent_intervals = librosa.effects.split(
+        #     self.l_channel,
+        #     top_db=db_threshold,
+        #     frame_length=min_samples,
+        #     hop_length=min_samples,
+        # )
+        # print(non_silent_intervals)
+
         self.no_silence_samples_indexes = np.setdiff1d(
             np.argwhere(self.l_channel),
             np.argwhere(self.l_channel[self.silence_samples_indexes]),
@@ -236,6 +264,7 @@ class Wavy:
 
         if plot:
             self._remove_silence_plot(db_scale=True)
+        return str(audio_no_silence_file_path)
 
     def plot_audio_amplitude(self, db_scale=False) -> None:
         """Plot orginal audio signal amplitude"""
@@ -290,7 +319,12 @@ class Wavy:
         plt.colorbar()
         plt.show()
 
-    def transcribe(self) -> list:
+    def transcribe(self) -> list[Word]:
+        """Transcribe audio and save transcipt to .csv file
+
+        Returns:
+            list[Word]: List of transcripted words
+        """
         model_path = self.repo_path.joinpath("models/vosk-model-small-pl-0.22")
         model = Model(str(model_path))
         list_of_words = []
@@ -335,16 +369,21 @@ class Wavy:
 
 
 def main():
-    test_wavy = Wavy("test.wav")
-    print(repr(test_wavy))
-    print(test_wavy)
+    wavy = Wavy("test.wav")
+    print(repr(wavy))
+    print(wavy)
 
-    # test_wavy.plot_audio_amplitude(db_scale=False)
-    test_wavy.remove_silence_by_signal_aplitude_threshold(threshold=5)
-    test_wavy.remove_silence_by_db_threshold(db_threshold=30, min_duration=0.1)
-    # test_wavy.plot_audio_frequency_spectrum()
+    # wavy.plot_audio_amplitude(db_scale=False)
+    no_silence_file = wavy.remove_silence_by_signal_aplitude_threshold(
+        threshold=5, verbose=True
+    )
+    no_silence_file = wavy.remove_silence_by_db_threshold(
+        db_threshold=30, min_duration=0.1, verbose=True
+    )
+    print(no_silence_file)
+    # wavy.plot_audio_frequency_spectrum()
 
-    list_of_words = test_wavy.transcribe()
+    list_of_words = wavy.transcribe()
     for word in list_of_words:
         print(word.to_string() + "\n")
     return 0

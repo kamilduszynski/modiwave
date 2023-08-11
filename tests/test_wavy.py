@@ -1,5 +1,4 @@
 # Standard Library Imports
-import re
 import unittest
 
 # Third-party Imports
@@ -43,9 +42,9 @@ class TestWavy(unittest.TestCase):
 
     def test_remove_silence_by_signal_aplitude_threshold(self):
         threshold = 5
-        self.wavy.remove_silence_by_signal_aplitude_threshold(threshold)
-        regx = re.compile(".wav\\b")
-        wavy_no_silence = Wavy(regx.sub("_no_silence.wav", str(self.audio_filename)))
+        wavy_no_silence = Wavy(
+            self.wavy.remove_silence_by_signal_aplitude_threshold(threshold)
+        )
         self.assertLessEqual(threshold, wavy_no_silence.min_amplitude)
 
     def test_transcribe(self):
