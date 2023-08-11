@@ -130,20 +130,7 @@ class Wavy:
         axs[2].set_xlabel("Duration (s)")
         plt.show()
 
-    def remove_silence_by_signal_aplitude_threshold(
-        self, threshold=4, plot=False
-    ) -> None:
-        self.silence_samples_indexes = np.where(np.abs(self.l_channel) < threshold)[0]
-        self.silence_samples_count = self.l_channel[self.silence_samples_indexes].shape[
-            0
-        ]
-        self.no_silence_samples_indexes = np.where(np.abs(self.l_channel) >= threshold)[
-            0
-        ]
-        self.no_silence_samples_count = self.l_channel[
-            self.no_silence_samples_indexes
-        ].shape[0]
-
+    def _remove_silence_print(self, audio_no_silence_file_path: str) -> None:
         og_d = math.modf(np.round(self.audio_samples / self.sampling_rate / 60, 2))
         s_d = math.modf(
             np.round(self.silence_samples_count / self.sampling_rate / 60, 2)
@@ -151,10 +138,6 @@ class Wavy:
         n_s_d = math.modf(
             np.round(self.no_silence_samples_count / self.sampling_rate / 60, 2)
         )
-
-        audio_no_silence_file = self.regx.sub("_no_silence.wav", self.audio_file)
-        audio_no_silence_file_path = self.audio_dir.joinpath(audio_no_silence_file)
-
         print("################## Removing silence ###################")
         print(f"|Audio without silence file: {audio_no_silence_file_path}")
         print(f"|")
@@ -168,17 +151,37 @@ class Wavy:
         print(f"|Silence duration: {int(s_d[1])}min {int(60 * s_d[0])}s")
         print("#######################################################")
 
+    def remove_silence_by_signal_aplitude_threshold(
+        self, threshold=4, plot=False, verbose=True
+    ) -> None:
+        self.silence_samples_indexes = np.where(np.abs(self.l_channel) < threshold)[0]
+        self.silence_samples_count = self.l_channel[self.silence_samples_indexes].shape[
+            0
+        ]
+        self.no_silence_samples_indexes = np.where(np.abs(self.l_channel) >= threshold)[
+            0
+        ]
+        self.no_silence_samples_count = self.l_channel[
+            self.no_silence_samples_indexes
+        ].shape[0]
+
+        audio_no_silence_file = self.regx.sub("_no_silence.wav", self.audio_file)
+        audio_no_silence_file_path = self.audio_dir.joinpath(audio_no_silence_file)
+
         wavfile.write(
             audio_no_silence_file_path,
             self.sampling_rate,
             self.audio[self.no_silence_samples_indexes].astype(self.audio_data_type),
         )
 
+        if verbose:
+            self._remove_silence_print(audio_no_silence_file_path)
+
         if plot:
             self._remove_silence_plot(db_scale=False)
 
     def remove_silence_by_db_threshold(
-        self, db_threshold=30, min_duration=0.1, plot=False
+        self, db_threshold=30, min_duration=0.1, plot=False, verbose=True
     ) -> None:
         min_samples = int(min_duration * self.sampling_rate)
         non_silent_intervals = librosa.effects.split(
@@ -190,9 +193,8 @@ class Wavy:
         print(non_silent_intervals)
         silence_samples_indexes = np.where(self.db_audio_l < -db_threshold)[0]
 
-        diff = np.diff(silence_samples_indexes)  # [:-1] - silence_samples_indexes[1:]
+        diff = np.diff(silence_samples_indexes)
         diff = np.append(diff, 1)
-        print(diff)
         diff = ut.find_subarrays(diff, np.full(min_samples, 1))
 
         si = np.array([])
@@ -220,35 +222,17 @@ class Wavy:
             self.no_silence_samples_indexes
         ].shape[0]
 
-        og_d = math.modf(np.round(self.audio_samples / self.sampling_rate / 60, 2))
-        s_d = math.modf(
-            np.round(self.silence_samples_count / self.sampling_rate / 60, 2)
-        )
-        n_s_d = math.modf(
-            np.round(self.no_silence_samples_count / self.sampling_rate / 60, 2)
-        )
-
         audio_no_silence_file = self.regx.sub("_no_silence.wav", self.audio_file)
         audio_no_silence_file_path = self.audio_dir.joinpath(audio_no_silence_file)
-
-        print("################## Removing silence ###################")
-        print(f"|Audio without silence file: {audio_no_silence_file_path}")
-        print(f"|")
-        print(f"|Original samples: {self.audio_samples}")
-        print(f"|Original duration: {int(og_d[1])}min {int(60 * og_d[0])}s")
-        print(f"|")
-        print(f"|No silence samples: {self.no_silence_samples_count}")
-        print(f"|No silence duration: {int(n_s_d[1])}min {int(60 * n_s_d[0])}s")
-        print(f"|")
-        print(f"|Silence samples: {self.silence_samples_count}")
-        print(f"|Silence duration: {int(s_d[1])}min {int(60 * s_d[0])}s")
-        print("#######################################################")
 
         wavfile.write(
             audio_no_silence_file_path,
             self.sampling_rate,
             self.audio[self.no_silence_samples_indexes].astype(self.audio_data_type),
         )
+
+        if verbose:
+            self._remove_silence_print(audio_no_silence_file_path)
 
         if plot:
             self._remove_silence_plot(db_scale=True)
@@ -313,11 +297,10 @@ class Wavy:
 
         if self.r_channel is not None:
             self._save_audio_mono()
-            audio_path = str(self.audio_mono_file_path)
         else:
-            audio_path = str(self.audio_path)
+            self.audio_mono_file_path = self.audio_path
 
-        with wave.open(audio_path, "rb") as wf:
+        with wave.open(str(self.audio_mono_file_path), "rb") as wf:
             rec = KaldiRecognizer(model, wf.getframerate())
             rec.SetWords(True)
             results = []
@@ -356,16 +339,14 @@ def main():
     print(repr(test_wavy))
     print(test_wavy)
 
-    test_wavy.plot_audio_amplitude(db_scale=False)
-    test_wavy.remove_silence_by_signal_aplitude_threshold(threshold=5, plot=True)
-    test_wavy.remove_silence_by_db_threshold(
-        db_threshold=30, min_duration=0.1, plot=True
-    )
+    # test_wavy.plot_audio_amplitude(db_scale=False)
+    test_wavy.remove_silence_by_signal_aplitude_threshold(threshold=5)
+    test_wavy.remove_silence_by_db_threshold(db_threshold=30, min_duration=0.1)
     # test_wavy.plot_audio_frequency_spectrum()
 
-    # list_of_words = test_wavy.transcribe()
-    # for word in list_of_words:
-    #     print(word.to_string() + "\n")
+    list_of_words = test_wavy.transcribe()
+    for word in list_of_words:
+        print(word.to_string() + "\n")
     return 0
 
 
