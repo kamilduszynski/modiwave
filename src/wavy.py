@@ -15,7 +15,7 @@ from vosk import Model, KaldiRecognizer
 from scipy.io import wavfile
 
 # Local Imports
-import src.tools.utils as ut
+import src.tools.utils as utils
 from src.tools.word import Word
 
 
@@ -23,7 +23,7 @@ class Wavy:
     def __init__(self, audio_file: str) -> None:
         self.audio_file = audio_file
         self.regx = re.compile(".wav\\b")
-        self.repo_path = ut.get_repo_path()
+        self.repo_path = utils.get_repo_path()
         self.audio_dir = self.repo_path.joinpath("audio")
         if not self.audio_dir.exists():
             os.mkdir(self.audio_dir)
@@ -87,11 +87,11 @@ class Wavy:
         )
 
     def _remove_silence_plot(self, db_scale: bool) -> None:
-        time_array = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
-        silence_time_array = ut.calculate_time_array(
+        time_array = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
+        silence_time_array = utils.calculate_time_array(
             self.silence_samples_count, self.sampling_rate
         )
-        no_silence_time_array = ut.calculate_time_array(
+        no_silence_time_array = utils.calculate_time_array(
             self.no_silence_samples_count, self.sampling_rate
         )
         time_arrays = (time_array, no_silence_time_array, silence_time_array)
@@ -210,7 +210,7 @@ class Wavy:
 
         diff = np.diff(silence_samples_indexes)
         diff = np.append(diff, 1)
-        diff = ut.find_subarrays(diff, np.full(min_samples, 1))
+        diff = utils.find_subarrays(diff, np.full(min_samples, 1))
 
         si = np.array([])
         for i in range(int(len(silence_samples_indexes) / min_samples)):
@@ -268,7 +268,7 @@ class Wavy:
             fig.suptitle("Audio amplitude", fontsize=16)
             fig.set_figheight(10)
             fig.set_figwidth(16)
-            x = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            x = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
             if db_scale:
                 y = self.db_audio_l
             else:
@@ -294,7 +294,7 @@ class Wavy:
         else:
             plt.figure(figsize=(16, 10))
             plt.title("Audio amplitude", fontsize=16)
-            x = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            x = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
             if db_scale:
                 y = self.db_audio_l
             else:
@@ -366,7 +366,7 @@ class Wavy:
 def main():
     wavy = Wavy("test.wav")
     print(repr(wavy))
-    print(wavy)
+    print(wavy.__dict__)
 
     list_of_words = wavy.transcribe()
     for word in list_of_words:
