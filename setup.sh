@@ -2,6 +2,10 @@
 
 MODELS_PATH=$PWD/models
 
+pip install -r requirements-dev.txt
+pip install -r requirements.txt
+pre-commit install
+
 if test -d $MODELS_PATH; then
     echo "Setup complete"
 else
