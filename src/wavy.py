@@ -12,11 +12,12 @@ import numpy as np
 import pandas as pd
 import librosa
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from vosk import Model, KaldiRecognizer
 from scipy.io import wavfile
 
 # Local Imports
-import src.tools.utils as ut
+import src.tools.utils as utils
 from src.tools.word import Word
 
 
@@ -24,7 +25,7 @@ class Wavy:
     def __init__(self, audio_file: str) -> None:
         self.audio_file = audio_file
         self.regx = re.compile(".wav\\b")
-        self.repo_path = ut.get_repo_path()
+        self.repo_path = utils.get_repo_path()
         self.audio_dir = self.repo_path.joinpath("audio")
         if not self.audio_dir.exists():
             os.mkdir(self.audio_dir)
@@ -66,7 +67,7 @@ class Wavy:
 
     def __str__(self) -> str:
         wavy_informal_string = str(
-            "######################## AUDIO ########################\n"
+            f"{'#'*20} AUDIO {'#'*20}\n"
             f"|Audio file:         {str(self.audio_path)}\n"
             f"|Data type:          {self.audio_data_type}\n"
             f"|Shape:              {self.audio_shape}\n"
@@ -74,7 +75,7 @@ class Wavy:
             f"|Duration:           {self.audio_duration}s\n"
             f"|Min amplitude:      {self.min_amplitude}\n"
             f"|Max amplitude:      {self.max_amplitude}\n"
-            "#######################################################"
+            f"{'#'*60}"
         )
         return wavy_informal_string
 
@@ -88,11 +89,11 @@ class Wavy:
         )
 
     def _remove_silence_plot(self, db_scale: bool) -> None:
-        time_array = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
-        silence_time_array = ut.calculate_time_array(
+        time_array = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
+        silence_time_array = utils.calculate_time_array(
             self.silence_samples_count, self.sampling_rate
         )
-        no_silence_time_array = ut.calculate_time_array(
+        no_silence_time_array = utils.calculate_time_array(
             self.no_silence_samples_count, self.sampling_rate
         )
         time_arrays = (time_array, no_silence_time_array, silence_time_array)
@@ -139,7 +140,7 @@ class Wavy:
         n_s_d = math.modf(
             np.round(self.no_silence_samples_count / self.sampling_rate / 60, 2)
         )
-        print("################## Removing silence ###################")
+        print(f"{'#'*20} Removing silence {'#'*20}")
         print(f"|Audio without silence file: {audio_no_silence_file_path}")
         print(f"|")
         print(f"|Original samples: {self.audio_samples}")
@@ -150,7 +151,7 @@ class Wavy:
         print(f"|")
         print(f"|Silence samples: {self.silence_samples_count}")
         print(f"|Silence duration: {int(s_d[1])}min {int(60 * s_d[0])}s")
-        print("#######################################################")
+        print(f"{'#'*60}")
 
     def remove_silence_by_signal_aplitude_threshold(
         self, threshold=4, plot=False, verbose=False
@@ -207,14 +208,14 @@ class Wavy:
             str: Audio without silence filepath
         """
         min_samples = int(min_duration * self.sampling_rate)
-        silence_samples_indexes = np.where(self.db_audio_l < -db_threshold)[0]
+        no_silence_samples_indexes = np.where(self.db_audio_l < db_threshold)[0]
 
-        diff = np.diff(silence_samples_indexes)
+        diff = np.diff(no_silence_samples_indexes)
         diff = np.append(diff, 1)
-        diff = ut.find_subarrays(diff, np.full(min_samples, 1))
+        diff = utils.find_subarrays(diff, np.full(min_samples, 1))
 
         si = np.array([])
-        for i in range(int(len(silence_samples_indexes) / min_samples)):
+        for i in tqdm(range(int(len(no_silence_samples_indexes) / min_samples))):
             if i * min_samples + min_samples > len(diff):
                 continue
             if (
@@ -224,11 +225,18 @@ class Wavy:
                 si = np.concatenate(
                     (si, diff[i * min_samples : i * min_samples + min_samples])
                 )
+        # rolled_diff = utils.rolling_window(diff, min_samples)
+        # print(rolled_diff[0])
+        # rolled_diff = np.apply_along_axis(lambda x: x[min_samples-1]-x[0], 1, rolled_diff)
+        # indicies = np.arange(min_samples-1, len(no_silence_samples_indexes), min_samples-1)
 
-        self.silence_samples_indexes = silence_samples_indexes[si.astype(int)]
-        self.silence_samples_count = self.l_channel[self.silence_samples_indexes].shape[
-            0
-        ]
+        # l = int(len(no_silence_samples_indexes) / min_samples)
+        # result = np.split(diff[:-1], l-1)
+
+        self.no_silence_samples_indexes = no_silence_samples_indexes[si.astype(int)]
+        self.no_silence_samples_count = self.l_channel[
+            self.no_silence_samples_indexes
+        ].shape[0]
 
         # non_silent_intervals = librosa.effects.split(
         #     self.l_channel,
@@ -238,13 +246,13 @@ class Wavy:
         # )
         # print(non_silent_intervals)
 
-        self.no_silence_samples_indexes = np.setdiff1d(
+        self.silence_samples_indexes = np.setdiff1d(
             np.argwhere(self.l_channel),
-            np.argwhere(self.l_channel[self.silence_samples_indexes]),
+            np.argwhere(self.l_channel[self.no_silence_samples_indexes]),
         )
-        self.no_silence_samples_count = self.l_channel[
-            self.no_silence_samples_indexes
-        ].shape[0]
+        self.silence_samples_count = self.l_channel[self.silence_samples_indexes].shape[
+            0
+        ]
 
         audio_no_silence_file = self.regx.sub("_no_silence.wav", self.audio_file)
         audio_no_silence_file_path = self.audio_dir.joinpath(audio_no_silence_file)
@@ -269,7 +277,7 @@ class Wavy:
             fig.suptitle("Audio amplitude", fontsize=16)
             fig.set_figheight(10)
             fig.set_figwidth(16)
-            x = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            x = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
             if db_scale:
                 y = self.db_audio_l
             else:
@@ -295,7 +303,7 @@ class Wavy:
         else:
             plt.figure(figsize=(16, 10))
             plt.title("Audio amplitude", fontsize=16)
-            x = ut.calculate_time_array(self.audio_samples, self.sampling_rate)
+            x = utils.calculate_time_array(self.audio_samples, self.sampling_rate)
             if db_scale:
                 y = self.db_audio_l
             else:
@@ -387,7 +395,7 @@ class Wavy:
 def main():
     wavy = Wavy("audio.wav")
     print(repr(wavy))
-    print(wavy)
+    print(str(wavy))
 
     wavy.cut_word("ja")
 

@@ -4,6 +4,7 @@ from pathlib import Path, PosixPath
 
 # Third-party Imports
 import numpy as np
+from tqdm import tqdm
 
 
 def get_repo_path() -> PosixPath:
@@ -32,13 +33,24 @@ def calculate_time_array(samples_count: int, sampling_rate: int) -> np.ndarray:
     return np.linspace(0, samples_count / sampling_rate, num=samples_count)
 
 
-def rolling_window(a, window):
-    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-    strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+def rolling_window(arr, window):
+    shape = arr.shape[:-1] + (arr.shape[-1] - window + 1, window)
+    strides = arr.strides + (arr.strides[-1],)
+    return np.lib.stride_tricks.as_strided(arr, shape=shape, strides=strides)
 
 
-def find_subarrays(a, b):
-    temp = rolling_window(a, len(b))
-    result = np.where(np.all(temp == b, axis=1))
-    return result[0] if result else None
+def find_subarrays(arr_a, arr_b):
+    temp = rolling_window(arr_a, len(arr_b))
+
+    # result = np.where(np.all(temp == b, axis=1))
+    result = []
+
+    for i in tqdm(range(temp.shape[0])):
+        if (temp[i, :] == arr_b).all():
+            result.append(i)
+
+    # for i, row in tqdm(enumerate(temp)):
+    #     if (row == b).all():
+    #         result.append(i)
+
+    return np.array(result)  # [0] if result else None

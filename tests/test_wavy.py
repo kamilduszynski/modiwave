@@ -18,7 +18,7 @@ class TestWavy(unittest.TestCase):
         self.audio_filename = audio_dir.joinpath(audio_file)
         self.wavy = Wavy(audio_file)
 
-    def test_incorrect_init(self):
+    def test_incorrect_file_path_provided(self):
         with self.assertRaises(FileNotFoundError):
             Wavy("incorrect_file_path")
 
@@ -28,7 +28,7 @@ class TestWavy(unittest.TestCase):
 
     def test_str(self):
         wavy_informal_string = str(
-            "######################## AUDIO ########################\n"
+            f"{'#'*20} AUDIO {'#'*20}\n"
             f"|Audio file:         {str(self.wavy.audio_path)}\n"
             f"|Data type:          int16\n"
             f"|Shape:              (57600, 2)\n"
@@ -36,7 +36,7 @@ class TestWavy(unittest.TestCase):
             f"|Duration:           1.2s\n"
             f"|Min amplitude:      0\n"
             f"|Max amplitude:      2191\n"
-            "#######################################################"
+            f"{'#'*60}"
         )
         self.assertEqual(wavy_informal_string, str(self.wavy))
 
