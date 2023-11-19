@@ -24,7 +24,8 @@ def get_sample_index_by_time(
 def cut_audio_segment(
     start_sample: float, end_sample: float, audio_array: np.ndarray
 ) -> np.ndarray:
-    return audio_array[start_sample : end_sample + 1]
+    segment = np.arange(start=start_sample, stop=end_sample)
+    return np.delete(audio_array, segment)
 
 
 def calculate_time_array(samples_count: int, sampling_rate: int) -> np.ndarray:

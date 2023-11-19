@@ -9,6 +9,7 @@ import wave
 
 # Third-party Imports
 import numpy as np
+import pandas as pd
 import librosa
 import matplotlib.pyplot as plt
 from vosk import Model, KaldiRecognizer
@@ -362,26 +363,53 @@ class Wavy:
                 writer.writerow(word.to_tuple())
         return list_of_words
 
+    def cut_word(self, word: str):
+        df_words = pd.read_csv(self.transcript_file_path, index_col="word")
+        start_time = df_words["start_time"].get(word)[0]
+        end_time = df_words["end_time"].get(word)[0]
+        start_sample, stop_sample = ut.get_sample_index_by_time(
+            start_time, end_time, self.sampling_rate
+        )
+        print(start_sample)
+        print(stop_sample)
+        audio_cut = ut.cut_audio_segment(start_sample, stop_sample, self.l_channel)
+
+        audio_cut_file = self.regx.sub(f"_no_{word}.wav", self.audio_file)
+        audio_cut_file_path = self.audio_dir.joinpath(audio_cut_file)
+
+        wavfile.write(
+            audio_cut_file_path,
+            self.sampling_rate,
+            audio_cut.astype(self.audio_data_type),
+        )
+
 
 def main():
-    wavy = Wavy("test.wav")
+    wavy = Wavy("audio.wav")
     print(repr(wavy))
     print(wavy)
 
+    wavy.cut_word("ja")
+
     list_of_words = wavy.transcribe()
     for word in list_of_words:
-        print(word.to_string() + "\n")
+        print(word.to_string())
 
     wavy.plot_audio_amplitude(db_scale=False)
     wavy.plot_audio_frequency_spectrum()
+
     wavy.remove_silence_by_signal_aplitude_threshold(
-        threshold=5, verbose=True, plot=True
+        threshold=0.1,
+        verbose=True,
+        plot=False,
     )
-    print(
-        wavy.remove_silence_by_db_threshold(
-            db_threshold=30, min_duration=0.1, verbose=True, plot=True
-        )
-    )
+
+    # wavy.remove_silence_by_db_threshold(
+    #     db_threshold=30,
+    #     min_duration=0.1,
+    #     verbose=True,
+    #     plot=True,
+    # )
     return 0
 
 
