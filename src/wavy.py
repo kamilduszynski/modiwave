@@ -375,12 +375,12 @@ class Wavy:
         df_words = pd.read_csv(self.transcript_file_path, index_col="word")
         start_time = df_words["start_time"].get(word)[0]
         end_time = df_words["end_time"].get(word)[0]
-        start_sample, stop_sample = ut.get_sample_index_by_time(
+        start_sample, stop_sample = utils.get_sample_index_by_time(
             start_time, end_time, self.sampling_rate
         )
         print(start_sample)
         print(stop_sample)
-        audio_cut = ut.cut_audio_segment(start_sample, stop_sample, self.l_channel)
+        audio_cut = utils.cut_audio_segment(start_sample, stop_sample, self.l_channel)
 
         audio_cut_file = self.regx.sub(f"_no_{word}.wav", self.audio_file)
         audio_cut_file_path = self.audio_dir.joinpath(audio_cut_file)
